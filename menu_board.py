@@ -12,6 +12,7 @@ class MenuBoard():
         self.menu = self._load_menu()
         self.board = self._load_board()
         self.names = []
+        self.max_vote = 1
 
     def get_menu(self):
         return self.menu
@@ -19,9 +20,11 @@ class MenuBoard():
     def get_board(self):
         return self.board
     
-    def get_total(self):
-        total = len(self.names) if len(self.names) > 0 else 1
-        return total
+    def get_names(self):
+        return ",".join(self.names)
+
+    def get_max_vote(self):
+        return self.max_vote
 
     def update_board(self, name, votes):
         if name not in self.names:
@@ -30,6 +33,7 @@ class MenuBoard():
                 category, food = vote.split(":")
                 self.board[category][food]["vote"] += 1
                 self.board[category][food]["people"].append(name)
+                self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
         return
     
     def get_top(self):

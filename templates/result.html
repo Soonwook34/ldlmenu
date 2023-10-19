@@ -35,6 +35,9 @@
                 <label class="btn btn-danger" for="reset-btn">초기화</label>
             </div>
         </div>
+        <div class="row">
+            <p class="">참여: {{names}}</p>
+        </div>
         <form>
             <div class="row mb-3">
                 {% for idx in range(3) %}
@@ -54,7 +57,7 @@
                         <div class="col-4 form-check my-1 px-1">
                             <p class="pt-3 mb-1">{{food}}</p>
                             <div class="progress" role="progressbar" aria-label="Basic example" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar progress-bar-striped bg-info" style="width: {{board[category][food]['vote']/total * 100}}%"></div>
+                                <div class="progress-bar progress-bar-striped bg-info" style="width: {{board[category][food]['vote']/max_vote * 100}}%"></div>
                             </div>
                         </div>
                     {% endfor %}

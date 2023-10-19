@@ -7,7 +7,7 @@ from menu_board import MenuBoard
 app = Flask(__name__)
 # 메뉴와 투표판
 menuboard = MenuBoard()
-script = "버전: 1.0.1 by 순욱"
+script = "버전: 1.0.2 by 순욱"
 
 @app.route("/")
 def home():
@@ -25,7 +25,12 @@ def result():
         votes = request.args.get("vote")
         menuboard.update_board(name, votes)
         return redirect(request.path)
-    return render_template("result.html", board=menuboard.get_board(), top=menuboard.get_top(), total=menuboard.get_total(), script=script)
+    return render_template("result.html", 
+                           board=menuboard.get_board(), 
+                           top=menuboard.get_top(), 
+                           names=menuboard.get_names(),
+                           max_vote=menuboard.get_max_vote(), 
+                           script=script)
 
 
 if __name__ == '__main__':
