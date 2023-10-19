@@ -1,11 +1,13 @@
-from socket import gethostname
 from flask import Flask
 from flask import (render_template, request, redirect)
 
 from menu_board import MenuBoard
 
 
-app = Flask("[SKKU-LDL] 메뉴 투표판")
+app = Flask(__name__)
+# 메뉴와 투표판
+menuboard = MenuBoard()
+script = "버전: 1.0.1 by 순욱"
 
 @app.route("/")
 def home():
@@ -13,7 +15,7 @@ def home():
     if clear:
         menuboard.clear_board()
         return redirect(request.path)
-    return render_template("home.html", menu=menuboard.get_menu())
+    return render_template("home.html", menu=menuboard.get_menu(), script=script)
 
 
 @app.route("/result")
@@ -22,12 +24,9 @@ def result():
     if name != None:
         votes = request.args.get("vote")
         menuboard.update_board(name, votes)
-    print(menuboard.get_total())
-    return render_template("result.html", board=menuboard.get_board(), top=menuboard.get_top(), total=menuboard.get_total())
+        return redirect(request.path)
+    return render_template("result.html", board=menuboard.get_board(), top=menuboard.get_top(), total=menuboard.get_total(), script=script)
 
 
 if __name__ == '__main__':
-    # 메뉴와 투표판
-    menuboard = MenuBoard()
-    if 'liveconsole' not in gethostname():
-        app.run(host="localhost", port=8080)
+    app.run(host="0.0.0.0", port=8080)

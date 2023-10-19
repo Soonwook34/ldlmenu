@@ -12,44 +12,49 @@
     <!-- Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Gothic:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700&family=Pacifico&family=Sunflower:wght@500;700&display=swap" rel="stylesheet">
 
-    <link href="{{url_for('static', filename='src/main.css')}}" rel="stylesheet">
+    <link href="./static/src/main.css" rel="stylesheet">
     <title>[SKKU-LDL] 메뉴 투표판</title>
 </head>
 <body>
-    <main class="container my-5 py-3 shadow-lg rounded position-relative">
+    <main class="container-xl shadow-lg rounded text-center">
         <div class="row mt-3">
-            <p class="my-3 text-center fs-3 fw-bold title">LearnData Lab MENU</p>
+            <p class="my-3 fs-3 fw-bold title">LearnData Lab MENU</p>
         </div>
         <form>
-            <div class="row justify-content-center my-3">
-                <div class="col-2 text-center">
-                        <button onclick="location.href='result';" class="btn btn-success mb-3 fs-5" id="result-btn">결과보기</button>
+            <div class="row my-3">
+                <div class="col">
+                    <button onclick="location.href='result';" class="btn btn-success" id="result-btn">결과보기</button>
                 </div>
-                <div class="col-4">
+                <div class="col">
                     <label for="name" class="visually-hidden">Input URL</label>
-                    <input type="text" class="form-control text-center fs-5" id="name" placeholder="이름." required>
+                    <input type="text" class="form-control text-center" id="name" placeholder="이름" required>
                 </div>
-                <div class="col-2 text-center">
-                    <button type="submit" class="btn btn-primary mb-3 fs-5" id="submit-btn">제출하기</button>
+                <div class="col">
+                    <button type="submit" class="btn btn-primary" id="submit-btn">제출하기</button>
                 </div>
             </div>
-            <div class="row justify-content-center">
+            <div class="container">
                 {% for category in menu %}
-                <div class="row category my-2">
-                    <p class="text-center fw-semibold fs-3">{{category}}</p>
-                    {% for food in menu[category] %}
-                        <div class="col-4 form-check my-2 text-center">
-                            <input type="checkbox" class="btn-check" id="{{category}}:{{food}}" autocomplete="off">
-                            <label class="btn btn-outline-dark d-block mx-5" for="{{category}}:{{food}}">{{food}}</label>
-                        </div>
-                    {% endfor %}
+                <div class="row category my-2 justify-content-center">
+                    <p class="fw-semibold fs-3 my-2 category">{{category}}</p>
+                    <div class="row row-cols-3 px-0">
+                        {% for food in menu[category] %}
+                            <div class="col form-check my-1 px-1">
+                                <input type="checkbox" class="btn-check" id="{{category}}:{{food}}" autocomplete="off">
+                                <label class="btn btn-outline-dark d-block px-0" for="{{category}}:{{food}}">{{food}}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>
         </form>
+        <div class="row">
+            <p>{{script}}</p>
+        </div>
     </main>
-    <script src="{{url_for('static', filename='src/main.js')}}"></script>
+    <script src="./static/src/main.js"></script>
 </body>
 </html>

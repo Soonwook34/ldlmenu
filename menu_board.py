@@ -1,4 +1,7 @@
 import json
+from copy import deepcopy
+
+from menu import menu_dict
 
 
 class MenuBoard():
@@ -41,8 +44,7 @@ class MenuBoard():
         
     
     def _load_menu(self):
-        with open("menu.json", "r", encoding="utf8") as menu_data:
-            menu = json.load(menu_data)
+        menu = deepcopy(menu_dict)
         return menu
 
     def _load_board(self):
