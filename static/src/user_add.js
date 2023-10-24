@@ -6,7 +6,7 @@ submitBtn.addEventListener("click", (e) => {
     userName = nameInput.value
     userName = userName.replaceAll(" ", "").replaceAll(",", "")
     if (userName.length > 0) {
-        if(!confirm(`현재 투표가 초기화됩니다.\n사용자'${userName}'을/를 추가할까요?`)) {
+        if(!confirm(`현재 투표가 초기화됩니다.\n사용자 '${userName}'을/를 추가할까요?`)) {
             return false;
         }
         else {
