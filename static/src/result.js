@@ -7,7 +7,7 @@ resetBtn.addEventListener("click", (e) => {
     }
     else {
         e.preventDefault();
-        window.location = '/?clear=1';
+        window.location = "/?clear=1";
     }
 });
 
@@ -17,6 +17,6 @@ homeBtn.addEventListener("click", (e) => {
     }
     else {
         e.preventDefault();
-        window.location = '/';
+        window.location = "/";
     }
 });

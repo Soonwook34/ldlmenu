@@ -1,3 +1,4 @@
+let resultBtn = document.getElementById("result-btn");
 let submitBtn = document.getElementById("submit-btn");
 let nameInput = document.getElementById("name");
 
@@ -12,4 +13,9 @@ submitBtn.addEventListener("click", (e) => {
         e.preventDefault();
         window.location = `/result?name=${nameInput.value}&vote=${checkList}`;
     }
+});
+
+resultBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.location = "/result";
 });

@@ -13,53 +13,38 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700&family=Pacifico&family=Sunflower:wght@500;700&display=swap" rel="stylesheet">
 
-    <link href="/static/src/result.css" rel="stylesheet">
-    <title>[SKKU-LDL] 투표 결과</title>
+    <link href="/static/src/main.css" rel="stylesheet">
+    <title>[SKKU-LDL] 메뉴 삭제</title>
 </head>
 <body>
     <main class="container-xl shadow-lg rounded text-center">
         <div class="row mt-3 align-items-center">
             <p class="my-3 fs-3 fw-bold title">LearnData Lab MENU</p>
         </div>
-        <div class="row align-items-center">
-            <div class="col my-3">
-                <input type="checkbox" class="btn-check" id="home-btn" autocomplete="off">
-                <label class="btn btn-success" for="home-btn">홈으로</label>
-            </div>
-            <div class="col my-3">
-                <p class="fw-bold fs-3 m-0">투표 결과</p>
-            </div>
-            <div class="col my-3">
-                <input type="checkbox" class="btn-check" id="reset-btn" autocomplete="off">
-                <label class="btn btn-danger" for="reset-btn">초기화</label>
-            </div>
-        </div>
-        <div class="row align-items-center">
-            <p class="">참여: {{names}}</p>
-        </div>
         <form>
-            <div class="row mb-3 align-items-center">
-                {% for idx in range(3) %}
-                    <div class="col justify-content-center">
-                        <p class="fs-3 my-0">{{idx+1}}등</p>
-                        <p class="fs-5 my-0">{{top[idx][0]}}</p>
-                        <p class="fs-5 my-0">{{top[idx][1]}}표</p>
-                        <p class="fs-6 my-0">{{top[idx][2]}}</p>
-                    </div>
-                {% endfor %}
+            <div class="row my-3 align-items-center">
+                <div class="col">
+                    <button class="btn btn-primary" id="home-btn">돌아가기</button>
+                </div>
+                <div class="col">
+                    <p class="m-0">삭제할 메뉴를 선택해 주세요.</p>
+                </div>
+                <div class="col">
+                    <button type="submit" class="btn btn-danger" id="delete-btn">삭제하기</button>
+                </div>
             </div>
             <div class="container">
-                {% for category in board %}
+                {% for category in menu %}
                 <div class="row category my-2 justify-content-center align-items-center">
                     <p class="fw-semibold fs-3 my-2 category">{{category}}</p>
-                    {% for food in board[category] %}
-                        <div class="col-4 form-check my-1 px-1">
-                            <p class="pt-3 mb-1">{{food}}</p>
-                            <div class="progress" role="progressbar" aria-label="Basic example" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar progress-bar-striped bg-info" style="width: {{board[category][food]['vote']/max_vote * 100}}%"></div>
+                    <div class="row row-cols-3 px-0">
+                        {% for food in menu[category] %}
+                            <div class="col form-check my-1 px-1">
+                                <input type="checkbox" class="btn-check" id="{{category}}:{{food}}" autocomplete="off">
+                                <label class="btn btn-outline-dark d-block px-0" for="{{category}}:{{food}}">{{food}}</label>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -72,6 +57,6 @@
             <div class="col"></div>
         </div>
     </main>
-    <script src="/static/src/result.js"></script>
+    <script src="/static/src/menu_delete.js"></script>
 </body>
 </html>
