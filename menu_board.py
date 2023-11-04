@@ -31,14 +31,23 @@ class MenuBoard():
         return self.max_vote
 
     def update_board(self, name, votes):
-        if name not in self.names:
+        if name in self.names:
+            self.delete_vote(name)
+        else:
             self.names.append(name)
-            for vote in votes.split(","):
-                category, food = vote.split(":")
-                self.board[category][food]["vote"] += 1
-                self.board[category][food]["people"].append(name)
-                self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
+        for vote in votes.split(","):
+            category, food = vote.split(":")
+            self.board[category][food]["vote"] += 1
+            self.board[category][food]["people"].append(name)
+            self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
         return
+    
+    def delete_vote(self, name):
+        for category in self.board:
+            for food in self.board[category]:
+                if name in self.board[category][food]["people"]:
+                    self.board[category][food]["people"].remove(name)
+                    self.board[category][food]["vote"] -= 1
     
     def add_menu(self, target):
         category, menu = target.split(":")

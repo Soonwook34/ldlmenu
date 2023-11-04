@@ -1,3 +1,5 @@
+from random import shuffle
+
 from flask import Flask
 from flask import (render_template, request, redirect)
 
@@ -7,7 +9,7 @@ from menu_board import MenuBoard
 app = Flask(__name__)
 # 메뉴와 투표판
 menuboard = MenuBoard()
-script = "버전: 1.0.5 by 순욱"
+script = "버전: 1.0.6 by 순욱"
 github = "https://github.com/Soonwook34/ldlmenu"
 
 @app.route("/")
@@ -16,7 +18,10 @@ def home():
     if clear:
         menuboard.clear_board()
         return redirect(request.path)
-    return render_template("home.html", menu=menuboard.get_menu(), user=menuboard.get_user(), script=script, github=github)
+    menu = menuboard.get_menu()
+    for m in menu:
+        shuffle(menu[m])
+    return render_template("home.html", menu=menu, user=menuboard.get_user(), script=script, github=github)
 
 
 @app.route("/result")
