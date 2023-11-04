@@ -1,8 +1,6 @@
+import os
 import json
 from copy import deepcopy
-
-import menu as mm
-import user as uu
 
 
 class MenuBoard():
@@ -80,13 +78,17 @@ class MenuBoard():
         return top_list[:3]
     
     def _load_menu(self):
-        menu = deepcopy(mm.menu_dict)
+        my_dir = os.path.dirname(__file__)
+        with open(os.path.join(my_dir, "menu.json"), "r", encoding="utf8") as menu_file:
+            menu = json.load(menu_file)
         for m in menu:
             menu[m] = sorted(menu[m])
         return menu
     
     def _load_user(self):
-        user = deepcopy(uu.user_list)
+        my_dir = os.path.dirname(__file__)
+        with open(os.path.join(my_dir, "user.json"), "r", encoding="utf8") as user_file:
+            user = json.load(user_file)
         user = sorted(user)
         return user
 
@@ -99,16 +101,15 @@ class MenuBoard():
         return board
 
     def _save_menu(self):
-        mm.menu_dict = deepcopy(self.menu)
-        with open("menu.json", "w", encoding="utf8") as output_file:
-            json.dump(mm.menu_dict, output_file, indent=4, ensure_ascii=False)
+        my_dir = os.path.dirname(__file__)
+        with open(os.path.join(my_dir, "menu.json"), "w", encoding="utf8") as output_file:
+            json.dump(self.menu, output_file, indent=4, ensure_ascii=False)
         self.clear_board()
         return
     
     def _save_user(self):
-        uu.user_list = deepcopy(self.user)
-        with open("user.json", "w", encoding="utf8") as output_file:
-            json.dump(uu.user_list, output_file, indent=4, ensure_ascii=False)
+        with open(os.path.join(my_dir, "user.json"), "w", encoding="utf8") as output_file:
+            json.dump(self.user, output_file, indent=4, ensure_ascii=False)
         self.clear_board()
         return
 

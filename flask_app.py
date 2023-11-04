@@ -7,7 +7,7 @@ from menu_board import MenuBoard
 app = Flask(__name__)
 # 메뉴와 투표판
 menuboard = MenuBoard()
-script = "버전: 1.0.4 by 순욱"
+script = "버전: 1.0.5 by 순욱"
 github = "https://github.com/Soonwook34/ldlmenu"
 
 @app.route("/")
