@@ -35,7 +35,10 @@
             </div>
         </div>
         <div class="row align-items-center">
-            <p class="">참여: {{names}}</p>
+            <p class="mb-0">인원: {{names|length}}</p>
+        </div>
+        <div class="row align-items-center">
+            <p class="mt-0">참여: {{",".join(names)}}</p>
         </div>
         <form>
             <div class="row mb-3 align-items-center">

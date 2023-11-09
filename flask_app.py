@@ -9,7 +9,7 @@ from menu_board import MenuBoard
 app = Flask(__name__)
 # 메뉴와 투표판
 menuboard = MenuBoard()
-script = "버전: 1.0.6 by 순욱"
+script = "버전: 1.0.7 by 순욱"
 github = "https://github.com/Soonwook34/ldlmenu"
 
 @app.route("/")
@@ -29,6 +29,9 @@ def result():
     name = request.args.get("name")
     if name != None:
         votes = request.args.get("vote")
+        # if len(votes) == 0:
+            # menuboard.delete_board()
+        # else:
         menuboard.update_board(name, votes)
         return redirect(request.path)
     return render_template("result.html", 

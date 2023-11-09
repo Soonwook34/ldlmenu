@@ -25,21 +25,27 @@ class MenuBoard():
         return self.board
     
     def get_names(self):
-        return ",".join(self.names)
+        return self.names
 
     def get_max_vote(self):
         return self.max_vote
 
     def update_board(self, name, votes):
-        if name in self.names:
-            self.delete_vote(name)
+        if len(votes) == 0:
+            if name in self.names:
+                self.delete_vote(name)
+                self.names.remove(name)
         else:
-            self.names.append(name)
-        for vote in votes.split(","):
-            category, food = vote.split(":")
-            self.board[category][food]["vote"] += 1
-            self.board[category][food]["people"].append(name)
-            self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
+            if name in self.names:
+                self.delete_vote(name)
+            else:
+                self.names.append(name)
+            vote_list = votes.split(",")
+            for vote in vote_list:
+                category, food = vote.split(":")
+                self.board[category][food]["vote"] += 1
+                self.board[category][food]["people"].append(name)
+                self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
         return
     
     def delete_vote(self, name):
@@ -109,12 +115,15 @@ class MenuBoard():
         return board
 
     def _save_menu(self):
+        for m in self.menu:
+            self.menu[m] = sorted(self.menu[m])
         with open(os.path.join(self.my_dir, "menu.json"), "w", encoding="utf8") as output_file:
             json.dump(self.menu, output_file, indent=4, ensure_ascii=False)
         self.clear_board()
         return
     
     def _save_user(self):
+        self.user = sorted(self.user)
         with open(os.path.join(self.my_dir, "user.json"), "w", encoding="utf8") as output_file:
             json.dump(self.user, output_file, indent=4, ensure_ascii=False)
         self.clear_board()

@@ -1,6 +1,7 @@
 let resultBtn = document.getElementById("result-btn");
 let submitBtn = document.getElementById("submit-btn");
 let submitBtnBottom = document.getElementById("submit-btn-bottom");
+let deleteBtn = document.getElementById("delete-btn");
 let nameInput = document.getElementById("name");
 
 handleSubmit = (e) => {
@@ -32,4 +33,16 @@ submitBtnBottom.addEventListener("click", (e) => {
 resultBtn.addEventListener("click", (e) => {
     e.preventDefault();
     window.location = "/result";
+});
+
+deleteBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    
+    if (!confirm(`투표 주워담이 '${nameInput.value}'님이 맞습니까?\n투표를 삭제합니다.`)) {
+        return false;
+    }
+    else {
+        let checkList = [];
+        window.location = `/result?name=${nameInput.value}&vote=${checkList}`;
+    }
 });
