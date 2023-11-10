@@ -42,12 +42,12 @@
         </div>
         <form>
             <div class="row mb-3 align-items-center">
-                {% for idx in range(3) %}
+                {% for rank, food, vote, people in top %}
                     <div class="col justify-content-center">
-                        <p class="fs-3 my-0">{{idx+1}}등</p>
-                        <p class="fs-5 my-0">{{top[idx][0]}}</p>
-                        <p class="fs-5 my-0">{{top[idx][1]}}표</p>
-                        <p class="fs-6 my-0">{{top[idx][2]}}</p>
+                        <p class="fs-3 my-0">{{rank}}등</p>
+                        <p class="fs-5 my-0">{{food}}</p>
+                        <p class="fs-5 my-0">{{vote}}표</p>
+                        <p class="fs-6 my-0">{{people}}</p>
                     </div>
                 {% endfor %}
             </div>

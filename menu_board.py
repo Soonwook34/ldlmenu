@@ -22,7 +22,10 @@ class MenuBoard():
         return self.user
     
     def get_board(self):
-        return self.board
+        ordered_board = {}
+        for category in self.board:
+            ordered_board[category] = dict(sorted(self.board[category].items(), key=lambda x: x[1]["vote"], reverse=True))
+        return ordered_board
     
     def get_names(self):
         return self.names
@@ -35,6 +38,7 @@ class MenuBoard():
             if name in self.names:
                 self.delete_vote(name)
                 self.names.remove(name)
+                self.max_vote -= 1
         else:
             if name in self.names:
                 self.delete_vote(name)
@@ -84,6 +88,7 @@ class MenuBoard():
         return
     
     def get_top(self):
+        N_TOP = 3
         top_list = []
         for category in self.board:
             for food in self.board[category]:
@@ -91,7 +96,15 @@ class MenuBoard():
                 people = self.board[category][food]["people"]
                 top_list.append((food, vote, ",".join(people)))
         top_list.sort(key=lambda x: x[1], reverse=True)
-        return top_list[:3]
+        top_list = top_list[:N_TOP]
+        rank = 1
+        prev_vote = top_list[0][1]
+        for idx, (food, vote, people) in enumerate(top_list):
+            if vote < prev_vote:
+                rank += 1
+            top_list[idx] = (rank, food, vote, people)
+            prev_vote = vote
+        return top_list
     
     def _load_menu(self):
         with open(os.path.join(self.my_dir, "menu.json"), "r", encoding="utf8") as menu_file:
