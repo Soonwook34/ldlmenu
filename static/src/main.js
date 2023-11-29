@@ -6,7 +6,9 @@ let nameInput = document.getElementById("name");
 
 
 let setLocalName = (name) => {
-    cookies = `name=${name};`;
+    let date = new Date();
+    date.setTime(date.getTime() + (1000 * 24 * 60 * 60 * 1000));
+    cookies = `name=${name};expires=${date.toUTCString()}`;
     document.cookie = cookies;
 };
 
