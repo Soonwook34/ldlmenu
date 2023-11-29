@@ -4,6 +4,45 @@ let submitBtnBottom = document.getElementById("submit-btn-bottom");
 let deleteBtn = document.getElementById("delete-btn");
 let nameInput = document.getElementById("name");
 
+
+let setLocalName = (name) => {
+    cookies = `name=${name};`;
+    document.cookie = cookies;
+};
+
+let getLocalName = () => {
+    let cookies = document.cookie.split(";");
+    let targetName = null;
+    cookies.forEach(e => {
+        let [cookieName, cookieValue] = e.split("=");
+        if (cookieName === "name") {
+            targetName = cookieValue;
+        }
+    });
+    return targetName;
+};
+
+let selectName = (name) => {
+    let selected = false;
+    Array.from(nameInput.options).forEach(e => {
+        if (e.value === name) {
+            e.selected = true;
+            selected = true;
+        }
+        else {
+            e.selected = false;
+        }
+    });
+    if (selected === false) {
+        nameInput.options[0].selected = true;
+    }
+};
+
+let userName = getLocalName();
+if (userName !== null) {
+    selectName(getLocalName());
+};
+
 handleSubmit = (e) => {
     e.preventDefault();
 
@@ -17,6 +56,7 @@ handleSubmit = (e) => {
             return false;
         }
         else {
+            setLocalName(nameInput.value)
             window.location = `/result?name=${nameInput.value}&vote=${checkList}`;
         }
     }
@@ -46,3 +86,4 @@ deleteBtn.addEventListener("click", (e) => {
         window.location = `/result?name=${nameInput.value}&vote=${checkList}`;
     }
 });
+

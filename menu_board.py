@@ -38,7 +38,6 @@ class MenuBoard():
             if name in self.names:
                 self.delete_vote(name)
                 self.names.remove(name)
-                self.max_vote -= 1
         else:
             if name in self.names:
                 self.delete_vote(name)
@@ -53,11 +52,13 @@ class MenuBoard():
         return
     
     def delete_vote(self, name):
+        self.max_vote -= 1
         for category in self.board:
             for food in self.board[category]:
                 if name in self.board[category][food]["people"]:
                     self.board[category][food]["people"].remove(name)
                     self.board[category][food]["vote"] -= 1
+                self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
     
     def add_menu(self, target):
         category, menu = target.split(":")
