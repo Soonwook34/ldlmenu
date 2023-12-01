@@ -10,7 +10,6 @@ let setLocalName = (name) => {
     date.setTime(date.getTime() + (1000 * 24 * 60 * 60 * 1000));
     cookies = `name=${name};path=/;expires=${date.toUTCString()};`;
     document.cookie = cookies;
-    
 };
 
 let getLocalName = () => {
