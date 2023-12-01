@@ -59,6 +59,7 @@ class MenuBoard():
                     self.board[category][food]["people"].remove(name)
                     self.board[category][food]["vote"] -= 1
                 self.max_vote = max(self.max_vote, self.board[category][food]["vote"])
+        self.max_vote = max(self.max_vote, 1)
     
     def add_menu(self, target):
         category, menu = target.split(":")

@@ -4,11 +4,17 @@ let submitBtnBottom = document.getElementById("submit-btn-bottom");
 let deleteBtn = document.getElementById("delete-btn");
 let nameInput = document.getElementById("name");
 
+const browserChecker = window.navigator.userAgent
 
 let setLocalName = (name) => {
     let date = new Date();
     date.setTime(date.getTime() + (1000 * 24 * 60 * 60 * 1000));
-    cookies = `name=${name};path=/;expires=${date.toUTCString()};`;
+    if (browserChecker.includes('Safari') && !browserChecker.includes('Chrome')) {
+        cookies = `name=${encodeURI(name)};path=/;expires=${date.toUTCString()};`;
+    }
+    else {
+        cookies = `name=${name};path=/;expires=${date.toUTCString()};`;
+    }
     document.cookie = cookies;
 };
 
@@ -18,7 +24,12 @@ let getLocalName = () => {
     cookies.forEach(e => {
         let [cookieName, cookieValue] = e.split("=");
         if (cookieName === "name") {
-            targetName = cookieValue;
+            if (browserChecker.includes('Safari') && !browserChecker.includes('Chrome')) {
+                targetName = decodeURI(cookieValue);
+            }
+            else {
+                targetName = cookieValue;
+            }
         }
     });
     return targetName;
