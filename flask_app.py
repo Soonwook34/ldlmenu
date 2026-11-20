@@ -7,7 +7,7 @@ from flask import Flask, g, jsonify, redirect, request
 import store
 from store import StoreError
 
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 APP_INDEX = os.path.join(BASE_DIR, "static", "app", "index.html")  # frontend/ 빌드 결과
 STATE_PLACEHOLDER = "<!--app-state-->"
