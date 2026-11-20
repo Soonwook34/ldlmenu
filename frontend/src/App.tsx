@@ -265,12 +265,6 @@ function Main({
                 )}
               </AnimatePresence>
             </div>
-            {state.round.next_reset && (
-              <p className="mt-1 flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
-                <Timer className="size-4" />
-                {state.round.next_reset_label} 초기화 · {remainingLabel(state.round.next_reset - now / 1000)}
-              </p>
-            )}
           </div>
           <button
             onClick={() => setNameOpen(true)}
@@ -280,6 +274,14 @@ function Main({
             <ChevronDown className="size-4 text-zinc-400" />
           </button>
         </div>
+        {/* 이름 버튼 옆이 아니라 카드 전체 폭을 쓰게 해서 줄바꿈을 막는다. 좁은 화면에서도 '·' 사이에서만 꺾인다 */}
+        {state.round.next_reset && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <Timer className="size-4 shrink-0" />
+            <span className="whitespace-nowrap">{state.round.next_reset_label} 초기화 ·</span>
+            <span className="whitespace-nowrap">{remainingLabel(state.round.next_reset - now / 1000)}</span>
+          </p>
+        )}
         <div className="mt-4 flex items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
             <motion.div
