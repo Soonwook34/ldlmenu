@@ -28,6 +28,21 @@
   --color-brand2-400: var(--brand2-400);
   --color-brand2-500: var(--brand2-500);
 }
+/* 기본(초록)을 맨 앞에: :root와 [data-accent]는 명시도가 같아서, 뒤에 오면 다른 색을 덮어쓴다 */
+:root,
+[data-accent="green"] {
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-200: #a7f3d0;
+  --brand-300: #6ee7b7;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+  --brand2-50: #f7fee7;
+  --brand2-400: #a3e635;
+  --brand2-500: #84cc16;
+}
 [data-accent="orange"] {
   --brand-50: #fff7ed;
   --brand-100: #ffedd5;
@@ -53,20 +68,6 @@
   --brand2-50: #ecfeff;
   --brand2-400: #22d3ee;
   --brand2-500: #06b6d4;
-}
-:root,
-[data-accent="green"] {
-  --brand-50: #ecfdf5;
-  --brand-100: #d1fae5;
-  --brand-200: #a7f3d0;
-  --brand-300: #6ee7b7;
-  --brand-400: #34d399;
-  --brand-500: #10b981;
-  --brand-600: #059669;
-  --brand-700: #047857;
-  --brand2-50: #f7fee7;
-  --brand2-400: #a3e635;
-  --brand2-500: #84cc16;
 }
 [data-accent="violet"] {
   --brand-50: #f5f3ff;
