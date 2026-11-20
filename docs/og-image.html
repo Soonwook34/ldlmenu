@@ -1,0 +1,80 @@
+<!doctype html>
+<!-- 카카오톡 등 링크 미리보기 이미지(frontend/public/og-image.png)의 원본. 브라우저에서 1200×630으로 열어 캡처하면 된다 -->
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=block" />
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: "Jua", sans-serif;
+    background: linear-gradient(135deg, #059669 0%, #10b981 45%, #84cc16 100%);
+    position: relative;
+    color: white;
+  }
+  /* 은은한 물방울 무늬 */
+  body::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.13) 2.5px, transparent 3px);
+    background-size: 34px 34px;
+  }
+  .glow { position: absolute; border-radius: 50%; background: rgba(255,255,255,.14); }
+  .card {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center; gap: 64px;
+  }
+  .logo {
+    width: 270px; height: 270px; flex-shrink: 0;
+    transform: rotate(-6deg);
+    filter: drop-shadow(0 22px 36px rgba(6, 78, 59, .35));
+  }
+  .text { display: flex; flex-direction: column; gap: 18px; }
+  .title { font-size: 96px; line-height: 1.05; letter-spacing: -1px; text-shadow: 0 4px 18px rgba(6,78,59,.25); white-space: nowrap; }
+  .pill {
+    align-self: flex-start;
+    background: white; color: #059669;
+    font-size: 40px; padding: 8px 26px 6px; border-radius: 999px;
+    box-shadow: 0 10px 24px rgba(6,78,59,.2);
+  }
+  .tag { font-size: 40px; opacity: .95; margin-top: 6px; white-space: nowrap; }
+  .emoji { position: absolute; font-size: 64px; filter: drop-shadow(0 8px 12px rgba(6,78,59,.25)); }
+  .url { position: absolute; bottom: 28px; width: 100%; text-align: center; font-size: 26px; opacity: .8; letter-spacing: .5px; }
+</style>
+</head>
+<body>
+  <div class="glow" style="width:520px;height:520px;left:-160px;top:-220px"></div>
+  <div class="glow" style="width:420px;height:420px;right:-120px;bottom:-200px"></div>
+
+  <span class="emoji" style="left:70px;top:56px;transform:rotate(-14deg)">🍔</span>
+  <span class="emoji" style="right:90px;top:48px;transform:rotate(12deg)">🍜</span>
+  <span class="emoji" style="left:120px;bottom:70px;transform:rotate(10deg);font-size:58px">🍕</span>
+  <span class="emoji" style="right:150px;bottom:84px;transform:rotate(-10deg);font-size:58px">🍣</span>
+  <span class="emoji" style="left:520px;top:30px;transform:rotate(8deg);font-size:50px">🍗</span>
+  <span class="emoji" style="right:400px;bottom:40px;transform:rotate(-6deg);font-size:46px">🥟</span>
+
+  <div class="card">
+    <!-- 앱 로고(LDL 투표함) — frontend/src/components/Logo.tsx와 같은 그림, 초록 고정 -->
+    <svg class="logo" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="24" fill="#10b981" stroke="white" stroke-width="3" />
+      <g transform="rotate(-7 50 28)">
+        <rect x="35.5" y="9" width="29" height="36" rx="5.5" fill="white" />
+        <g transform="translate(38.72 15.2) scale(0.94)" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+          <path d="M7 2v20" />
+          <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+        </g>
+      </g>
+      <rect x="15" y="41" width="70" height="47" rx="11" fill="white" />
+      <rect x="30" y="46" width="40" height="4.2" rx="2.1" fill="#a7f3d0" />
+      <text x="50" y="76" text-anchor="middle" font-size="25" letter-spacing="0.5" fill="#10b981" font-family="Jua">LDL</text>
+    </svg>
+    <div class="text">
+      <div class="title">오늘 뭐 먹지? 🍚</div>
+      <div class="pill">LDL 메뉴 투표</div>
+      <div class="tag">내 한 표가 오늘 메뉴를 바꾼다!</div>
+    </div>
+  </div>
+  <div class="url">ldlmenu.pythonanywhere.com</div>
+</body>
+</html>
