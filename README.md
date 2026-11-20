@@ -7,7 +7,7 @@
 **"오늘 뭐 먹지?" 30분 회의를 30초 투표로.**<br/>
 SKKU LearnData Lab의 점심·저녁 메뉴 투표 웹앱
 
-[![version](https://img.shields.io/badge/version-2.0.3-10b981?style=flat-square)](#-업데이트-소식)
+[![version](https://img.shields.io/badge/version-2.0.4-10b981?style=flat-square)](#-업데이트-소식)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -261,6 +261,8 @@ flowchart LR
 
 ## 📝 업데이트 소식
 
+- **v2.0.4 (2026.11.20)**
+    - 카카오톡 등에 링크를 공유하면 미리보기에 로고 이미지와 소개 문구가 나옵니다.
 - **v2.0.3 (2026.11.20)**
     - 회차 카드의 남은 시간("5시간 57분 남음")이 두 줄로 꺾이던 문제를 고쳤습니다.
 - **v2.0.2 (2026.11.20)**
