@@ -1,80 +1,47 @@
-<!DOCTYPE html>
-<html lang="kr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- BootStrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-    <!-- Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700&family=Pacifico&family=Sunflower:wght@500;700&display=swap" rel="stylesheet">
-
-    <link href="/static/src/result.css" rel="stylesheet">
-    <title>[SKKU-LDL] 투표 결과</title>
-</head>
-<body>
-    <main class="container-xl shadow-lg rounded text-center">
-        <div class="row mt-3 align-items-center">
-            <p class="my-3 fs-3 fw-bold title">LearnData Lab MENU</p>
-        </div>
-        <div class="row align-items-center">
-            <div class="col my-3">
-                <input type="checkbox" class="btn-check" id="home-btn" autocomplete="off">
-                <label class="btn btn-success" for="home-btn">홈으로</label>
-            </div>
-            <div class="col my-3">
-                <p class="fw-bold fs-3 m-0">투표 결과</p>
-            </div>
-            <div class="col my-3">
-                <input type="checkbox" class="btn-check" id="reset-btn" autocomplete="off">
-                <label class="btn btn-danger" for="reset-btn">초기화</label>
+{% extends "base.html" %}
+{% block title %}투표 결과{% endblock %}
+{% block content %}
+<div class="row align-items-center">
+    <div class="col my-3"><a class="btn btn-success" href="/">홈으로</a></div>
+    <div class="col my-3"><p class="fw-bold fs-3 m-0">{{state.round.name}} 결과</p></div>
+    <div class="col my-3"><button class="btn btn-danger" id="reset-btn">초기화</button></div>
+</div>
+<p class="mb-0">인원: {{state.voters|length}}{% if state.round.next_reset_label %} · {{state.round.next_reset_label}}에 자동 초기화{% endif %}</p>
+<p>참여: {{state.voters|join(", ")}}</p>
+<div class="row mb-3 align-items-start">
+    {% for m in state.ranking %}
+    <div class="col-4">
+        <p class="fs-3 my-0">{{m.rank}}등</p>
+        <p class="fs-5 my-0">{{m.name}}</p>
+        <p class="fs-5 my-0">{{m.votes}}표</p>
+        <p class="fs-6 my-0">{{m.voters|join(", ")}}</p>
+    </div>
+    {% else %}
+    <p class="text-secondary">아직 투표가 없어요.</p>
+    {% endfor %}
+</div>
+<div class="container">
+    {% for category in state.categories %}
+    <div class="row category my-2 justify-content-center align-items-center">
+        <p class="fw-semibold fs-3 my-2 category">{{category.name}}</p>
+        {% for food in category.menus|sort(attribute="votes", reverse=True) %}
+        <div class="col-4 my-1 px-1">
+            <p class="pt-3 mb-1 text-truncate">{{food.name}}{% if food.votes %} <b>{{food.votes}}</b>{% endif %}</p>
+            <div class="progress" role="progressbar" aria-label="{{food.name}} 득표" aria-valuenow="{{food.votes}}" aria-valuemin="0" aria-valuemax="{{state.max_votes}}" title="{{food.voters|join(', ')}}">
+                <div class="progress-bar progress-bar-striped bg-info" style="width: {{ (food.votes / state.max_votes * 100) if state.max_votes else 0 }}%"></div>
             </div>
         </div>
-        <div class="row align-items-center">
-            <p class="mb-0">인원: {{names|length}}</p>
-        </div>
-        <div class="row align-items-center">
-            <p class="mt-0">참여: {{",".join(names)}}</p>
-        </div>
-        <form>
-            <div class="row mb-3 align-items-center">
-                {% for rank, food, vote, people in top %}
-                    <div class="col justify-content-center">
-                        <p class="fs-3 my-0">{{rank}}등</p>
-                        <p class="fs-5 my-0">{{food}}</p>
-                        <p class="fs-5 my-0">{{vote}}표</p>
-                        <p class="fs-6 my-0">{{people}}</p>
-                    </div>
-                {% endfor %}
-            </div>
-            <div class="container">
-                {% for category in board %}
-                <div class="row category my-2 justify-content-center align-items-center">
-                    <p class="fw-semibold fs-3 my-2 category">{{category}}</p>
-                    {% for food in board[category] %}
-                        <div class="col-4 form-check my-1 px-1">
-                            <p class="pt-3 mb-1">{{food}}</p>
-                            <div class="progress" role="progressbar" aria-label="Basic example" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar progress-bar-striped bg-info" style="width: {{board[category][food]['vote']/max_vote * 100}}%"></div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-                {% endfor %}
-            </div>
-        </form>
-        <div class="row align-items-center pb-2">
-            <div class="col"></div>
-            <div class="col">
-                <p class="m-0">{{script}} <a class="link-success link-underline-opacity-0 link-underline-opacity-75-hover" href="{{github}}" target="_blank">깃헙</a></p>
-            </div>
-            <div class="col"></div>
-        </div>
-    </main>
-    <script src="/static/src/result.js"></script>
-</body>
-</html>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    onClick("reset-btn", async () => {
+        if (!confirm("이번 회차 투표를 모두 초기화할까요?")) return;
+        await api("/api/reset");
+        location.reload();
+    });
+</script>
+{% endblock %}

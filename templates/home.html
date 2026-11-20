@@ -1,89 +1,62 @@
-<!DOCTYPE html>
-<html lang="kr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% extends "base.html" %}
+{% block content %}
+<p class="mb-0 text-secondary">
+    {{state.round.name}} 투표{% if state.round.next_reset_label %} · {{state.round.next_reset_label}}에 초기화{% endif %} · {{state.voters|length}}명 참여
+</p>
+<div class="row my-3 align-items-center">
+    <div class="col"><a class="btn btn-success" href="/result">결과보기</a></div>
+    <div class="col">
+        <select class="form-select text-center" id="name" aria-label="이름">
+            <option value="" {% if not me %}selected{% endif %} disabled>이름 선택</option>
+            {% for user in state.users %}
+            <option value="{{user.id}}" {% if me and me.id == user.id %}selected{% endif %}>{{user.name}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col"><button class="btn btn-primary" id="submit-btn">제출하기</button></div>
+</div>
+{% set categories = state.categories %}
+{% set selected = state.selections.get(me.id, []) if me else [] %}
+{% include "_menu_grid.html" %}
+<div class="row my-3 align-items-center">
+    <div class="col"><button class="btn btn-primary" id="submit-btn-bottom">제출하기</button></div>
+    <div class="col"><button class="btn btn-danger" id="delete-btn">투표 취소</button></div>
+</div>
+{% endblock %}
+{% block footer_right %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">설정</button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/menu-add">메뉴 추가</a></li>
+        <li><a class="dropdown-item" href="/menu-delete">메뉴 삭제</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/user-add">사용자 추가</a></li>
+        <li><a class="dropdown-item" href="/user-delete">사용자 삭제</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/settings">투표 시간 설정</a></li>
+    </ul>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    const nameInput = document.getElementById("name");
+    const userName = () => nameInput.options[nameInput.selectedIndex].text;
 
-    <!-- BootStrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script> -->
-    <!-- Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nanum+Gothic:wght@400;700&family=Pacifico&family=Sunflower:wght@500;700&display=swap" rel="stylesheet">
-
-    <link href="/static/src/main.css" rel="stylesheet">
-    <title>[SKKU-LDL] 메뉴 투표판</title>
-</head>
-<body>
-    <main class="container-xl shadow-lg rounded text-center">
-        <div class="row mt-3 align-items-center">
-            <p class="my-3 fs-3 fw-bold title">LearnData Lab MENU</p>
-        </div>
-        <form>
-            <div class="row my-3 align-items-center">
-                <div class="col">
-                    <button class="btn btn-success" id="result-btn">결과보기</button>
-                </div>
-                <div class="col">
-                    <select class="form-select text-center" id="name" aria-label="이름">
-                        {% for name in user %}
-                            <option value="{{name}}">{{name}}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col">
-                    <button type="submit" class="btn btn-primary" id="submit-btn">제출하기</button>
-                </div>
-            </div>
-            <div class="container">
-                {% for category in menu %}
-                <div class="row category my-2 justify-content-center align-items-center">
-                    <p class="fw-semibold fs-3 my-2 category">{{category}}</p>
-                    <div class="row row-cols-3 px-0">
-                        {% for food in menu[category] %}
-                            <div class="col form-check my-1 px-1">
-                                <input type="checkbox" class="btn-check" id="{{category}}:{{food}}" autocomplete="off">
-                                <label class="btn btn-outline-dark d-block px-0" for="{{category}}:{{food}}">{{food}}</label>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </form>
-        <div class="row my-3 align-items-center">
-            <div class="col">
-                <button type="submit" class="btn btn-primary" id="submit-btn-bottom">제출하기</button>
-            </div>
-            <div class="col">
-                <button type="submit" class="btn btn-danger" id="delete-btn">삭제하기</button>
-            </div>
-        </div>
-        <div class="row align-items-center pb-2">
-            <div class="col"></div>
-            <div class="col">
-                <p class="m-0">{{script}} <a class="link-success link-underline-opacity-0 link-underline-opacity-75-hover" href="{{github}}" target="_blank">깃헙</a></p>
-            </div>
-            <div class="col">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">설정</button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="menu-add">메뉴 추가</a></li>
-                        <li><a class="dropdown-item" href="menu-delete">메뉴 삭제</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="user-add">사용자 추가</a></li>
-                        <li><a class="dropdown-item" href="user-delete">사용자 삭제</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </main>
-    <script src="/static/src/main.js"></script>
-</body>
-</html>
+    async function submitVote() {
+        if (!nameInput.value) return alert("이름을 먼저 선택해 주세요.");
+        const ids = checkedIds();
+        if (ids.length === 0) return alert("메뉴를 한 개 이상 선택해 주세요.");
+        if (!confirm(`'${userName()}'님이 맞습니까?\n이미 투표했다면 이번 선택으로 바뀝니다.`)) return;
+        await api("/api/vote", { user_id: Number(nameInput.value), menu_ids: ids });
+        location.href = "/result";
+    }
+    onClick("submit-btn", submitVote);
+    onClick("submit-btn-bottom", submitVote);
+    onClick("delete-btn", async () => {
+        if (!nameInput.value) return alert("이름을 먼저 선택해 주세요.");
+        if (!confirm(`'${userName()}'님의 이번 회차 투표를 취소합니다.`)) return;
+        await api("/api/vote", { user_id: Number(nameInput.value), menu_ids: [] });
+        location.href = "/result";
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+<div class="container">
+    <div class="row category my-2 justify-content-center align-items-center">
+        <p class="fw-semibold fs-3 my-2 category">사용자</p>
+        <div class="row row-cols-3 px-0">
+            {% for user in users %}
+            <div class="col form-check my-1 px-1">
+                <input type="checkbox" class="btn-check" id="u{{user.id}}" data-id="{{user.id}}" autocomplete="off" {% if not selectable %}disabled{% endif %}>
+                <label class="btn btn-outline-dark d-block px-0 text-truncate" for="u{{user.id}}">{{user.name}}</label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
