@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* 앱 전체 글꼴: Jua(배민 주아체). 불러오기 전/실패 시에만 시스템 글꼴 */
+  /* Jua는 같은 px에서도 작아 보여서 글자 크기 단계를 한 칸씩 키운다 (모바일 가독성) */
+  --text-xs: 0.8125rem; /* 13px */
+  --text-sm: 0.9375rem; /* 15px */
+  --text-base: 1.0625rem; /* 17px */
+  --text-lg: 1.1875rem; /* 19px */
+  --text-xl: 1.3125rem; /* 21px */
+  --text-2xl: 1.625rem; /* 26px */
+  --font-sans: "Jua", -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
+/* 강조색: brand(주색) · brand2(그라데이션 짝). <html data-accent="...">로 바꾸고, 설정 › 화면에서 고른다 */
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand2-50: var(--brand2-50);
+  --color-brand2-400: var(--brand2-400);
+  --color-brand2-500: var(--brand2-500);
+}
+[data-accent="orange"] {
+  --brand-50: #fff7ed;
+  --brand-100: #ffedd5;
+  --brand-200: #fed7aa;
+  --brand-300: #fdba74;
+  --brand-400: #fb923c;
+  --brand-500: #f97316;
+  --brand-600: #ea580c;
+  --brand-700: #c2410c;
+  --brand2-50: #fffbeb;
+  --brand2-400: #fbbf24;
+  --brand2-500: #f59e0b;
+}
+[data-accent="blue"] {
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand2-50: #ecfeff;
+  --brand2-400: #22d3ee;
+  --brand2-500: #06b6d4;
+}
+:root,
+[data-accent="green"] {
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-200: #a7f3d0;
+  --brand-300: #6ee7b7;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+  --brand2-50: #f7fee7;
+  --brand2-400: #a3e635;
+  --brand2-500: #84cc16;
+}
+[data-accent="violet"] {
+  --brand-50: #f5f3ff;
+  --brand-100: #ede9fe;
+  --brand-200: #ddd6fe;
+  --brand-300: #c4b5fd;
+  --brand-400: #a78bfa;
+  --brand-500: #8b5cf6;
+  --brand-600: #7c3aed;
+  --brand-700: #6d28d9;
+  --brand2-50: #fdf4ff;
+  --brand2-400: #e879f9;
+  --brand2-500: #d946ef;
+}
+[data-accent="pink"] {
+  --brand-50: #fdf2f8;
+  --brand-100: #fce7f3;
+  --brand-200: #fbcfe8;
+  --brand-300: #f9a8d4;
+  --brand-400: #f472b6;
+  --brand-500: #ec4899;
+  --brand-600: #db2777;
+  --brand-700: #be185d;
+  --brand2-50: #fff1f2;
+  --brand2-400: #fb7185;
+  --brand2-500: #f43f5e;
+}
+
+html {
+  color-scheme: light;
+  /* 시트를 열어 스크롤을 잠가도 스크롤바 자리를 유지해 화면이 옆으로 밀리지 않게 */
+  scrollbar-gutter: stable;
+  /* Jua는 굵기가 하나뿐: font-bold 등에서 가짜 굵게를 만들지 않는다 (위계는 크기·색으로) */
+  font-synthesis: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+html.dark {
+  color-scheme: dark;
+}
+body {
+  @apply bg-zinc-50 text-base text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+  overscroll-behavior-y: none;
+}
+button {
+  cursor: pointer;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
