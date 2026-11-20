@@ -63,50 +63,106 @@ export function NamePicker({
   prefs: Prefs;
 }) {
   const [picked, setPicked] = useState<User | null>(null);
+  // 첫 방문은 두 단계: 1) 이름 → 2) 화면 설정 + 시작하기 (이름이 많아도 설정을 건너뛰지 않게)
+  const [step, setStep] = useState<"name" | "prefs">("name");
+  const prefsStep = onboarding && step === "prefs" && picked !== null;
   const selectedId = onboarding ? picked?.id : me?.id;
 
+  const title = !onboarding ? "누구세요?" : prefsStep ? `${picked.name} 님, 반가워요! 👋` : "반가워요! 👋";
+
   return (
-    <Sheet open={open} onClose={onClose} title={onboarding ? "반가워요! 👋" : "누구세요?"} tall={onboarding}>
-      <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-        {onboarding
-          ? "이 기기에서 쓸 이름과 화면을 골라 주세요. 나중에 설정에서 언제든 바꿀 수 있어요."
-          : "한 번 고르면 이 기기에서 계속 기억해요. 목록에 없으면 설정 › 사용자에서 추가할 수 있어요."}
-      </p>
-      {onboarding && <h4 className="mb-2 text-sm font-semibold text-zinc-500">이름</h4>}
-      <div className="grid grid-cols-3 gap-2">
-        {users.map((u) => (
-          <motion.button
-            key={u.id}
-            whileTap={{ scale: 0.93 }}
-            onClick={() => (onboarding ? setPicked(u) : onPick(u))}
-            aria-pressed={selectedId === u.id}
+    <Sheet open={open} onClose={onClose} title={title} tall={onboarding} scrollKey={prefsStep ? "prefs" : "name"}>
+      {onboarding && <StepDots step={prefsStep ? 2 : 1} />}
+      <AnimatePresence mode="wait" initial={false}>
+        {prefsStep ? (
+          <motion.div
+            key="prefs"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.15 }}
+          >
+            <p className="mb-5 text-sm text-zinc-500 dark:text-zinc-400">
+              화면을 내 취향대로 골라 보세요. 이 기기에만 저장되고, 설정에서 언제든 바꿀 수 있어요.
+            </p>
+            <PrefPickers prefs={prefs} idPrefix="onboarding" />
+            <div className="sticky bottom-0 -mx-5 mt-6 flex gap-2 bg-gradient-to-t from-white from-70% to-transparent px-5 pt-4 dark:from-zinc-900">
+              <motion.button
+                whileTap={{ scale: 0.94 }}
+                aria-label="이름 다시 고르기"
+                onClick={() => setStep("name")}
+                className="grid size-14 shrink-0 place-items-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+              >
+                <ChevronLeft className="size-6" />
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => onPick(picked)}
+                className="h-14 flex-1 rounded-2xl bg-brand-500 text-lg font-bold text-white shadow-lg shadow-brand-500/30"
+              >
+                시작하기
+              </motion.button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="name"
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.15 }}
+          >
+            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+              {onboarding
+                ? "이 기기에서 쓸 이름을 골라 주세요. 다음 단계에서 테마 색과 화면 모드도 고를 수 있어요."
+                : "한 번 고르면 이 기기에서 계속 기억해요. 목록에 없으면 설정 › 사용자에서 추가할 수 있어요."}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {users.map((u) => (
+                <motion.button
+                  key={u.id}
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => {
+                    if (!onboarding) return onPick(u);
+                    setPicked(u);
+                    setStep("prefs");
+                  }}
+                  aria-pressed={selectedId === u.id}
+                  className={cn(
+                    "h-12 truncate rounded-2xl px-2 font-semibold transition-colors",
+                    selectedId === u.id ? "bg-brand-500 text-white" : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100",
+                  )}
+                >
+                  {u.name}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Sheet>
+  );
+}
+
+/** 첫 방문 화면의 단계 표시 (1 이름 · 2 화면) */
+function StepDots({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-zinc-400">
+      {(["이름", "화면 설정"] as const).map((label, i) => (
+        <span key={label} className={cn("flex items-center gap-1.5", step === i + 1 && "text-brand-500")}>
+          {i > 0 && <span className="h-px w-4 bg-zinc-300 dark:bg-zinc-700" />}
+          <span
             className={cn(
-              "h-12 truncate rounded-2xl px-2 font-semibold transition-colors",
-              selectedId === u.id ? "bg-brand-500 text-white" : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100",
+              "grid size-5 place-items-center rounded-full text-[11px] text-white",
+              step >= i + 1 ? "bg-brand-500" : "bg-zinc-300 dark:bg-zinc-700",
             )}
           >
-            {u.name}
-          </motion.button>
-        ))}
-      </div>
-      {onboarding && (
-        <>
-          <div className="mt-6">
-            <PrefPickers prefs={prefs} idPrefix="onboarding" />
-          </div>
-          <div className="sticky bottom-0 -mx-5 mt-4 bg-gradient-to-t from-white from-70% to-transparent px-5 pt-4 dark:from-zinc-900">
-            <motion.button
-              whileTap={picked ? { scale: 0.97 } : undefined}
-              disabled={!picked}
-              onClick={() => picked && onPick(picked)}
-              className="h-14 w-full rounded-2xl bg-brand-500 text-lg font-bold text-white shadow-lg shadow-brand-500/30 transition-colors disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none dark:disabled:bg-zinc-800"
-            >
-              {picked ? `${picked.name} 님으로 시작하기` : "이름을 골라 주세요"}
-            </motion.button>
-          </div>
-        </>
-      )}
-    </Sheet>
+            {i + 1}
+          </span>
+          {label}
+        </span>
+      ))}
+    </div>
   );
 }
 

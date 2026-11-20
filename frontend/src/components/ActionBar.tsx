@@ -15,11 +15,12 @@ type Props = {
   onSubmit: () => void;
   onCancelVote: () => void;
   onPickName: () => void;
+  onShowResult: () => void; // 이미 투표한 그대로일 때 버튼을 누르면 결과로
 };
 
 /** 화면 하단 고정 바: 고른 메뉴 칩 + 투표 버튼 */
 export const ActionBar = forwardRef<HTMLButtonElement, Props>(function ActionBar(
-  { me, selected, voted, dirty, busy, runoff, onRemove, onSubmit, onCancelVote, onPickName },
+  { me, selected, voted, dirty, busy, runoff, onRemove, onSubmit, onCancelVote, onPickName, onShowResult },
   buttonRef,
 ) {
   const count = selected.length;
@@ -39,7 +40,7 @@ export const ActionBar = forwardRef<HTMLButtonElement, Props>(function ActionBar
     disabled = true;
   } else if (voted && !dirty) {
     label = "투표 완료";
-    disabled = true;
+    action = onShowResult;
     done = true;
   } else {
     label = runoff
@@ -120,6 +121,7 @@ export const ActionBar = forwardRef<HTMLButtonElement, Props>(function ActionBar
                 >
                   {done && <Check className="size-5" strokeWidth={3} />}
                   {label}
+                  {done && <span className="text-base opacity-80">· 결과 보기</span>}
                 </motion.span>
               </AnimatePresence>
             )}

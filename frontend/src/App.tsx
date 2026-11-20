@@ -382,6 +382,10 @@ function Main({
           onSubmit={submit}
           onCancelVote={cancelVote}
           onPickName={() => setNameOpen(true)}
+          onShowResult={() => {
+            setTab("result");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
         />
       )}
 
