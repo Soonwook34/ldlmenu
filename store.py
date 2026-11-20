@@ -1,11 +1,19 @@
 """SQLite 저장소와 투표 집계 로직.
 
-- 메뉴/사용자는 삭제 시 비활성화(active=0)만 한다. 같은 이름으로 다시 추가하면 복구된다.
-- 투표는 지우지 않고 created_at으로 회차를 구분한다. 현재 회차 시작 시각 이후의 투표만 집계한다.
-- 회차 시작 시각 = max(가장 최근 자동 초기화 시각, 마지막 수동 초기화 시각).
+DB에는 '지금' 필요한 것만 남긴다: 메뉴, 사용자, 설정, 그리고 현재 회차의 투표.
+- 회차가 바뀌면(설정한 초기화 시각이 지나면) 이전 회차 투표는 다음 요청 때 삭제된다.
+- 수동 초기화는 투표를 즉시 전부 삭제한다.
+- 메뉴/사용자 삭제 시 그 메뉴/사용자의 투표도 함께 삭제된다.
+
+진행 단계(phase, 회차마다 처음엔 open):
+  open ──마감──▶ closed (1등이 하나)
+    └───마감──▶ runoff (공동 1등만 후보, 1인 1표) ──마감──▶ closed / 다시 runoff
+  closed ──마감 취소──▶ 마감 직전 단계로 복귀.  runoff에서는 랜덤으로 정할 수도 있다.
+  결승으로 넘어갈 때 그 전 투표는 집계 결과(prelim)만 남기고 삭제한다.
 """
 import json
 import os
+import random
 import re
 import sqlite3
 import time
@@ -15,6 +23,7 @@ KST = timezone(timedelta(hours=9))  # 한국은 서머타임이 없어 고정 �
 DEFAULT_ROUNDS = [{"name": "점심", "reset": "14:00"}, {"name": "저녁", "reset": "20:00"}]
 MAX_ROUNDS = 6
 NAME_MAX = 20
+SCHEMA_VERSION = 2
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 SCHEMA = """
@@ -27,21 +36,18 @@ CREATE TABLE IF NOT EXISTS menus (
     id INTEGER PRIMARY KEY,
     category_id INTEGER NOT NULL REFERENCES categories(id),
     name TEXT NOT NULL,
-    active INTEGER NOT NULL DEFAULT 1,
     UNIQUE (category_id, name)
 );
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    active INTEGER NOT NULL DEFAULT 1
+    name TEXT NOT NULL UNIQUE
 );
 CREATE TABLE IF NOT EXISTS votes (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    menu_id INTEGER NOT NULL REFERENCES menus(id),
-    created_at REAL NOT NULL
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    menu_id INTEGER NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
+    created_at REAL NOT NULL,
+    PRIMARY KEY (user_id, menu_id)
 );
-CREATE INDEX IF NOT EXISTS idx_votes_created ON votes(created_at);
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -70,15 +76,31 @@ def init_db(db_path, seed_dir):
     conn = connect(db_path)
     try:
         with conn:
+            _migrate_v120(conn)
             conn.executescript(SCHEMA)
             if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
                 _seed(conn, seed_dir)
             if _get_setting(conn, "rounds") is None:
                 _set_setting(conn, "rounds", DEFAULT_ROUNDS)
-            if _get_setting(conn, "manual_reset_at") is None:
-                _set_setting(conn, "manual_reset_at", 0)
     finally:
         conn.close()
+
+
+def _migrate_v120(conn):
+    """v1.2.0 스키마(비활성화 플래그, 투표 id 컬럼)를 쓰던 DB를 한 번만 정리한다."""
+    if conn.execute("PRAGMA user_version").fetchone()[0] >= SCHEMA_VERSION:
+        return
+    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    if "menus" in tables:
+        conn.execute("DROP TABLE IF EXISTS votes")  # 회차 투표는 보존하지 않는다
+        for table in ("menus", "users"):
+            cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+            if "active" in cols:
+                conn.execute(f"DELETE FROM {table} WHERE active = 0")
+                if sqlite3.sqlite_version_info >= (3, 35):
+                    conn.execute(f"ALTER TABLE {table} DROP COLUMN active")
+        conn.execute("DELETE FROM settings WHERE key = 'manual_reset_at'")
+    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
 def _seed(conn, seed_dir):
@@ -123,8 +145,12 @@ def _clean_name(value, label):
     return name
 
 
+def _is_int(v):
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
 def _id_list(values, label):
-    if not isinstance(values, list) or not all(isinstance(v, int) and not isinstance(v, bool) for v in values):
+    if not isinstance(values, list) or not all(_is_int(v) for v in values):
         raise StoreError(f"{label} 형식이 올바르지 않습니다.")
     return sorted(set(values))
 
@@ -136,39 +162,39 @@ def _parse_hm(hm):
     return int(h), int(m)
 
 
+def get_rounds(conn):
+    return sorted(_get_setting(conn, "rounds") or [], key=lambda r: r["reset"])
+
+
 def round_info(conn, now=None):
-    """현재 회차 정보. now는 epoch 초(테스트용)."""
+    """현재 회차 정보. now는 epoch 초(테스트용). 회차가 없으면 자동 초기화 없음."""
     now = time.time() if now is None else now
-    rounds = sorted(_get_setting(conn, "rounds") or [], key=lambda r: r["reset"])
-    manual = float(_get_setting(conn, "manual_reset_at") or 0)
+    rounds = get_rounds(conn)
+    if not rounds:
+        return {"name": "투표", "start": 0, "next_reset": None, "next_reset_label": None}
+
     now_dt = datetime.fromtimestamp(now, KST)
-
-    last_auto, next_reset, name = None, None, "투표"
-    if rounds:
-        today = now_dt.date()
-        boundaries = []  # (datetime, round)
-        for day_offset in (-1, 0, 1):
-            day = today + timedelta(days=day_offset)
-            for r in rounds:
-                h, m = _parse_hm(r["reset"])
-                boundaries.append((datetime(day.year, day.month, day.day, h, m, tzinfo=KST), r))
-        past = [b for b in boundaries if b[0] <= now_dt]
-        future = [b for b in boundaries if b[0] > now_dt]
-        last_auto = max(past, key=lambda b: b[0])[0].timestamp()
-        nxt = min(future, key=lambda b: b[0])
-        next_reset, name = nxt[0].timestamp(), nxt[1]["name"]
-
-    start = max(last_auto or 0, manual)
+    boundaries = []  # (datetime, round)
+    for day_offset in (-1, 0, 1):
+        day = now_dt.date() + timedelta(days=day_offset)
+        for r in rounds:
+            h, m = _parse_hm(r["reset"])
+            boundaries.append((datetime(day.year, day.month, day.day, h, m, tzinfo=KST), r))
+    last = max(b[0] for b in boundaries if b[0] <= now_dt)
+    nxt_dt, nxt_round = min((b for b in boundaries if b[0] > now_dt), key=lambda b: b[0])
     return {
-        "name": name,
-        "start": start,
-        "next_reset": next_reset,
-        "next_reset_label": None if next_reset is None else datetime.fromtimestamp(next_reset, KST).strftime("%H:%M"),
+        "name": nxt_round["name"],
+        "start": last.timestamp(),
+        "next_reset": nxt_dt.timestamp(),
+        "next_reset_label": nxt_dt.strftime("%H:%M"),
     }
 
 
-def get_rounds(conn):
-    return sorted(_get_setting(conn, "rounds") or [], key=lambda r: r["reset"])
+def _purge(conn, start):
+    """현재 회차 시작 이전의 투표를 지운다. 폴링마다 쓰기 잠금을 잡지 않도록 지울 게 있을 때만."""
+    if conn.execute("SELECT 1 FROM votes WHERE created_at < ? LIMIT 1", (start,)).fetchone():
+        with conn:
+            conn.execute("DELETE FROM votes WHERE created_at < ?", (start,))
 
 
 def set_rounds(conn, rounds):
@@ -192,24 +218,25 @@ def set_rounds(conn, rounds):
     return cleaned
 
 
-def reset_now(conn, now=None):
+def reset_now(conn):
     with conn:
-        _set_setting(conn, "manual_reset_at", time.time() if now is None else now)
+        conn.execute("DELETE FROM votes")
+        conn.execute("DELETE FROM settings WHERE key = 'phase'")
 
 
 # ---------------------------------------------------------------- 조회
 
 def get_users(conn):
-    return [dict(r) for r in conn.execute("SELECT id, name FROM users WHERE active = 1 ORDER BY name")]
+    return [dict(r) for r in conn.execute("SELECT id, name FROM users ORDER BY name")]
 
 
 def get_user(conn, user_id):
-    row = conn.execute("SELECT id, name FROM users WHERE id = ? AND active = 1", (user_id,)).fetchone()
+    row = conn.execute("SELECT id, name FROM users WHERE id = ?", (user_id,)).fetchone()
     return None if row is None else dict(row)
 
 
 def find_user_by_name(conn, name):
-    row = conn.execute("SELECT id, name FROM users WHERE name = ? AND active = 1", (name,)).fetchone()
+    row = conn.execute("SELECT id, name FROM users WHERE name = ?", (name,)).fetchone()
     return None if row is None else dict(row)
 
 
@@ -217,30 +244,38 @@ def get_categories(conn):
     """[{id, name, menus: [{id, name}]}] (메뉴는 이름순)"""
     cats = [dict(r, menus=[]) for r in conn.execute("SELECT id, name FROM categories ORDER BY sort_order, id")]
     by_id = {c["id"]: c for c in cats}
-    for r in conn.execute("SELECT id, category_id, name FROM menus WHERE active = 1 ORDER BY name"):
+    for r in conn.execute("SELECT id, category_id, name FROM menus ORDER BY name"):
         by_id[r["category_id"]]["menus"].append({"id": r["id"], "name": r["name"]})
     return cats
 
 
-def get_state(conn, now=None):
-    """화면 하나를 그리는 데 필요한 모든 것: 회차, 사용자, 카테고리별 집계, 순위."""
-    rnd = round_info(conn, now)
+def _tally(conn):
+    """현재 투표 집계: (menu_id -> [투표자 이름], user_id -> 이름, user_id -> [menu_id])"""
     rows = conn.execute(
-        "SELECT v.menu_id, u.id AS user_id, u.name AS user_name FROM votes v "
-        "JOIN users u ON u.id = v.user_id AND u.active = 1 "
-        "JOIN menus m ON m.id = v.menu_id AND m.active = 1 "
-        "WHERE v.created_at >= ? ORDER BY v.created_at",
-        (rnd["start"],),
+        "SELECT v.menu_id, v.user_id, u.name AS user_name FROM votes v "
+        "JOIN users u ON u.id = v.user_id ORDER BY v.created_at, u.name"
     ).fetchall()
-
-    voters_by_menu = {}
-    voter_names = {}
+    voters_by_menu, voter_names, selections = {}, {}, {}
     for r in rows:
         voters_by_menu.setdefault(r["menu_id"], []).append(r["user_name"])
         voter_names[r["user_id"]] = r["user_name"]
-    selections = {}
-    for r in rows:
         selections.setdefault(r["user_id"], []).append(r["menu_id"])
+    return voters_by_menu, voter_names, selections
+
+
+def _phase(conn, start):
+    """현재 회차의 진행 단계. 회차가 바뀌었으면 open으로 돌아간다."""
+    phase = _get_setting(conn, "phase")
+    if not phase or phase.get("round_start") != start:
+        return {"status": "open", "round_start": start, "stage": 0}
+    return phase
+
+
+def get_state(conn, now=None):
+    """화면 하나를 그리는 데 필요한 모든 것: 회차, 진행 단계, 설정, 사용자, 카테고리별 집계, 순위."""
+    rnd = round_info(conn, now)
+    _purge(conn, rnd["start"])
+    voters_by_menu, voter_names, selections = _tally(conn)
 
     categories = get_categories(conn)
     all_menus = []
@@ -248,17 +283,28 @@ def get_state(conn, now=None):
         for m in c["menus"]:
             m["voters"] = voters_by_menu.get(m["id"], [])
             m["votes"] = len(m["voters"])
-            m["category"] = c["name"]
-            all_menus.append(m)
+            all_menus.append(dict(m, category=c["name"]))
+    by_id = {m["id"]: m for m in all_menus}
 
-    max_votes = max((m["votes"] for m in all_menus), default=0)
+    phase = _phase(conn, rnd["start"])
+    winner = by_id.get(phase.get("winner_id"))
     return {
         "round": rnd,
+        "phase": {
+            "status": phase["status"],
+            "stage": phase.get("stage", 0),  # 결승 몇 번째인지 (1 = 첫 결승)
+            "candidates": [i for i in phase.get("candidates", []) if i in by_id],
+            "prelim": phase.get("prelim", []),  # 결승 직전 투표 결과 [{id, name, category, votes}]
+            "winner": winner and {"id": winner["id"], "name": winner["name"], "category": winner["category"]},
+            "decided_by": phase.get("decided_by"),
+            "can_reopen": phase["status"] == "closed" and "prev" in phase,
+        },
+        "rounds": get_rounds(conn),
         "users": get_users(conn),
         "categories": categories,
         "voters": sorted(voter_names.values()),
         "selections": selections,  # user_id -> [menu_id]
-        "max_votes": max_votes,
+        "max_votes": max((m["votes"] for m in all_menus), default=0),
         "ranking": ranking(all_menus),
     }
 
@@ -279,39 +325,186 @@ def ranking(menus, top=3):
 # ---------------------------------------------------------------- 변경
 
 def submit_vote(conn, user_id, menu_ids, now=None):
-    """현재 회차의 해당 사용자 투표를 menu_ids로 교체한다. 빈 목록이면 투표 취소."""
+    """해당 사용자의 투표를 menu_ids로 교체한다. 빈 목록이면 투표 취소."""
     menu_ids = _id_list(menu_ids, "메뉴")
-    if not isinstance(user_id, int) or isinstance(user_id, bool) or get_user(conn, user_id) is None:
+    if not _is_int(user_id) or get_user(conn, user_id) is None:
         raise StoreError("사용자를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.", 404)
     if menu_ids:
         placeholders = ",".join("?" * len(menu_ids))
-        found = conn.execute(
-            f"SELECT COUNT(*) FROM menus WHERE active = 1 AND id IN ({placeholders})", menu_ids
-        ).fetchone()[0]
+        found = conn.execute(f"SELECT COUNT(*) FROM menus WHERE id IN ({placeholders})", menu_ids).fetchone()[0]
         if found != len(menu_ids):
             raise StoreError("삭제된 메뉴가 포함되어 있습니다. 새로고침 후 다시 선택해 주세요.", 409)
     now = time.time() if now is None else now
     start = round_info(conn, now)["start"]
+    _purge(conn, start)
+    phase = _phase(conn, start)
+    if phase["status"] == "closed":
+        raise StoreError("투표가 마감됐어요. 새로고침해 주세요.", 409)
+    if phase["status"] == "runoff":
+        if len(menu_ids) > 1:
+            raise StoreError("결승에서는 한 메뉴만 고를 수 있어요.")
+        if not set(menu_ids) <= set(phase["candidates"]):
+            raise StoreError("결승 후보가 아닌 메뉴예요. 새로고침해 주세요.", 409)
     with conn:
-        conn.execute("DELETE FROM votes WHERE user_id = ? AND created_at >= ?", (user_id, start))
+        conn.execute("DELETE FROM votes WHERE user_id = ?", (user_id,))
         conn.executemany(
             "INSERT INTO votes (user_id, menu_id, created_at) VALUES (?, ?, ?)",
             [(user_id, mid, now) for mid in menu_ids],
         )
 
 
+def close_vote(conn, pick_random=False, now=None):
+    """투표 마감. 1등이 하나면 확정, 공동 1등이면 결승(runoff)을 연다. pick_random이면 1등 후보 중 무작위 확정."""
+    start = round_info(conn, now)["start"]
+    _purge(conn, start)
+    phase = _phase(conn, start)
+    if phase["status"] == "closed":
+        raise StoreError("이미 마감됐어요.", 409)
+
+    existing = {m["id"]: dict(m, category=c["name"]) for c in get_categories(conn) for m in c["menus"]}
+    voters_by_menu = _tally(conn)[0]
+    pool = [i for i in phase.get("candidates", existing) if i in existing] if phase["status"] == "runoff" else list(existing)
+    votes = {i: len(voters_by_menu.get(i, [])) for i in pool}
+    top = max(votes.values(), default=0)
+    tied = sorted(i for i, v in votes.items() if v == top and v > 0)
+
+    if pick_random:
+        if phase["status"] != "runoff":
+            raise StoreError("랜덤 결정은 결승에서만 할 수 있어요.")
+        winner, decided_by = random.choice(tied or pool), "random"
+    elif not tied:
+        raise StoreError("결승 투표가 아직 없어요." if phase["status"] == "runoff" else "아직 투표가 없어요.")
+    elif len(tied) == 1:
+        winner, decided_by = tied[0], "vote"
+    else:
+        prelim = sorted(
+            ({"id": i, "name": existing[i]["name"], "category": existing[i]["category"], "votes": v}
+             for i, v in votes.items() if v > 0),
+            key=lambda m: (-m["votes"], m["name"]),
+        )
+        with conn:
+            _set_setting(conn, "phase", {
+                "round_start": start, "status": "runoff", "stage": phase.get("stage", 0) + 1,
+                "candidates": tied, "prelim": prelim,
+            })
+            conn.execute("DELETE FROM votes")
+        return "runoff"
+
+    prev = {k: v for k, v in phase.items() if k != "prev"}
+    with conn:
+        _set_setting(conn, "phase", dict(prev, status="closed", winner_id=winner, decided_by=decided_by, prev=prev))
+    return "closed"
+
+
+def reopen_vote(conn, now=None):
+    """마감 취소: 마감 직전 단계(투표 중 또는 결승)로 되돌린다. 투표는 그대로 남아 있다."""
+    start = round_info(conn, now)["start"]
+    phase = _phase(conn, start)
+    if phase["status"] != "closed" or "prev" not in phase:
+        raise StoreError("마감된 투표가 없어요.", 409)
+    with conn:
+        _set_setting(conn, "phase", phase["prev"])
+
+
+def _require(conn, table, row_id, label):
+    if not _is_int(row_id) or conn.execute(f"SELECT 1 FROM {table} WHERE id = ?", (row_id,)).fetchone() is None:
+        raise StoreError(f"{label}을(를) 찾을 수 없습니다. 새로고침해 주세요.", 404)
+
+
+def add_category(conn, name):
+    name = _clean_name(name, "카테고리 이름")
+    order = conn.execute("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories").fetchone()[0]
+    try:
+        with conn:
+            cur = conn.execute("INSERT INTO categories (name, sort_order) VALUES (?, ?)", (name, order))
+    except sqlite3.IntegrityError:
+        raise StoreError(f"'{name}' 카테고리가 이미 있어요.", 409)
+    return cur.lastrowid
+
+
+def rename_category(conn, category_id, name):
+    _require(conn, "categories", category_id, "카테고리")
+    name = _clean_name(name, "카테고리 이름")
+    try:
+        with conn:
+            conn.execute("UPDATE categories SET name = ? WHERE id = ?", (name, category_id))
+    except sqlite3.IntegrityError:
+        raise StoreError(f"'{name}' 카테고리가 이미 있어요.", 409)
+
+
+def move_category(conn, category_id, offset):
+    """카테고리 순서를 offset(-1: 앞으로, 1: 뒤로)만큼 옮긴다."""
+    _require(conn, "categories", category_id, "카테고리")
+    if offset not in (-1, 1):
+        raise StoreError("이동 방향이 올바르지 않습니다.")
+    ids = [r[0] for r in conn.execute("SELECT id FROM categories ORDER BY sort_order, id")]
+    i = ids.index(category_id)
+    j = i + offset
+    if 0 <= j < len(ids):
+        ids[i], ids[j] = ids[j], ids[i]
+        with conn:
+            conn.executemany("UPDATE categories SET sort_order = ? WHERE id = ?", [(k, cid) for k, cid in enumerate(ids)])
+
+
+def delete_category(conn, category_id):
+    """카테고리와 그 안의 메뉴(와 그 메뉴의 투표)를 함께 삭제한다."""
+    _require(conn, "categories", category_id, "카테고리")
+    with conn:
+        conn.execute("DELETE FROM menus WHERE category_id = ?", (category_id,))
+        conn.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+
+
+def rename_menu(conn, menu_id, name):
+    _require(conn, "menus", menu_id, "메뉴")
+    name = _clean_name(name, "메뉴 이름")
+    try:
+        with conn:
+            conn.execute("UPDATE menus SET name = ? WHERE id = ?", (name, menu_id))
+    except sqlite3.IntegrityError:
+        raise StoreError(f"같은 카테고리에 '{name}'이(가) 이미 있어요.", 409)
+
+
+def move_menus(conn, menu_ids, category_id):
+    """메뉴를 다른 카테고리로 옮긴다. 투표는 그대로 유지된다. 이름이 겹치면 아무것도 옮기지 않는다."""
+    menu_ids = _id_list(menu_ids, "메뉴")
+    if not menu_ids:
+        raise StoreError("옮길 메뉴를 선택해 주세요.")
+    _require(conn, "categories", category_id, "카테고리")
+    placeholders = ",".join("?" * len(menu_ids))
+    moving = conn.execute(f"SELECT id, name FROM menus WHERE id IN ({placeholders})", menu_ids).fetchall()
+    if len(moving) != len(menu_ids):
+        raise StoreError("삭제된 메뉴가 포함되어 있습니다. 새로고침해 주세요.", 409)
+    clash = conn.execute(
+        f"SELECT name FROM menus WHERE category_id = ? AND id NOT IN ({placeholders}) "
+        f"AND name IN (SELECT name FROM menus WHERE id IN ({placeholders})) ORDER BY name",
+        [category_id] + menu_ids + menu_ids,
+    ).fetchall()
+    if clash:
+        raise StoreError(f"옮길 카테고리에 같은 이름이 있어요: {', '.join(r[0] for r in clash)}", 409)
+    with conn:
+        conn.executemany("UPDATE menus SET category_id = ? WHERE id = ?", [(category_id, i) for i in menu_ids])
+    return len(menu_ids)
+
+
+def rename_user(conn, user_id, name):
+    _require(conn, "users", user_id, "사용자")
+    name = _clean_name(name, "이름")
+    try:
+        with conn:
+            conn.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
+    except sqlite3.IntegrityError:
+        raise StoreError(f"'{name}' 님이 이미 있어요.", 409)
+
+
 def add_menu(conn, category_id, name):
     name = _clean_name(name, "메뉴 이름")
-    if conn.execute("SELECT 1 FROM categories WHERE id = ?", (category_id,)).fetchone() is None:
+    if not _is_int(category_id) or conn.execute("SELECT 1 FROM categories WHERE id = ?", (category_id,)).fetchone() is None:
         raise StoreError("카테고리를 찾을 수 없습니다.", 404)
-    row = conn.execute("SELECT id, active FROM menus WHERE category_id = ? AND name = ?", (category_id, name)).fetchone()
-    with conn:
-        if row is None:
+    try:
+        with conn:
             conn.execute("INSERT INTO menus (category_id, name) VALUES (?, ?)", (category_id, name))
-        elif row["active"]:
-            raise StoreError(f"'{name}'은(는) 이미 있는 메뉴입니다.", 409)
-        else:
-            conn.execute("UPDATE menus SET active = 1 WHERE id = ?", (row["id"],))
+    except sqlite3.IntegrityError:
+        raise StoreError(f"'{name}'은(는) 이미 있는 메뉴입니다.", 409)
     return name
 
 
@@ -320,20 +513,17 @@ def delete_menus(conn, menu_ids):
     if not menu_ids:
         raise StoreError("삭제할 메뉴를 선택해 주세요.")
     with conn:
-        conn.executemany("UPDATE menus SET active = 0 WHERE id = ?", [(i,) for i in menu_ids])
+        conn.executemany("DELETE FROM menus WHERE id = ?", [(i,) for i in menu_ids])
 
 
 def add_user(conn, name):
     name = _clean_name(name, "이름")
-    row = conn.execute("SELECT id, active FROM users WHERE name = ?", (name,)).fetchone()
-    with conn:
-        if row is None:
-            conn.execute("INSERT INTO users (name) VALUES (?)", (name,))
-        elif row["active"]:
-            raise StoreError(f"'{name}'은(는) 이미 있는 사용자입니다.", 409)
-        else:
-            conn.execute("UPDATE users SET active = 1 WHERE id = ?", (row["id"],))
-    return name
+    try:
+        with conn:
+            cur = conn.execute("INSERT INTO users (name) VALUES (?)", (name,))
+    except sqlite3.IntegrityError:
+        raise StoreError(f"'{name}'은(는) 이미 있는 사용자입니다.", 409)
+    return {"id": cur.lastrowid, "name": name}
 
 
 def delete_users(conn, user_ids):
@@ -341,4 +531,4 @@ def delete_users(conn, user_ids):
     if not user_ids:
         raise StoreError("삭제할 사용자를 선택해 주세요.")
     with conn:
-        conn.executemany("UPDATE users SET active = 0 WHERE id = ?", [(i,) for i in user_ids])
+        conn.executemany("DELETE FROM users WHERE id = ?", [(i,) for i in user_ids])
