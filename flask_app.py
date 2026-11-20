@@ -212,4 +212,5 @@ def create_app(db_path=None):
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    # 로컬 개발용 (배포 서버는 WSGI로 app을 불러간다). 5050은 frontend의 vite 프록시와 맞춘 포트
+    app.run(host="0.0.0.0", port=5050)

@@ -11,7 +11,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    // 개발 중에는 Flask(5050)로 API를 넘긴다: python -c "from flask_app import app; app.run(port=5050)"
+    // 개발 중에는 Flask(5050)로 API를 넘긴다: 루트에서 python flask_app.py
     proxy: { "/api": "http://127.0.0.1:5050" },
   },
 });
